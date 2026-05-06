@@ -5,7 +5,7 @@ import {
   Award, Swords, Heart, X, Settings, Sparkles, Crown, Shield,
   Rocket, Brain, BookOpen, Music, Moon, Apple, Footprints,
   Timer, Coffee, Salad, ArrowUp, Medal, TrendingUp, CalendarCheck,
-  CircleDot, Loader2
+  CircleDot, Loader2, Sunrise, Sun, Sunset
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════
@@ -111,12 +111,18 @@ const TaskIcon = ({ icon, size = 22, color = "currentColor", ...props }) => {
 // ═══════════════════════════════════════════════════
 //  CONSTANTS
 // ═══════════════════════════════════════════════════
+const PERIODS = [
+  { id: "morning", label: "Mattina", Icon: Sunrise, color: "#F59E0B" },
+  { id: "afternoon", label: "Pomeriggio", Icon: Sun, color: "#EF4444" },
+  { id: "evening", label: "Sera", Icon: Sunset, color: "#8B5CF6" },
+];
+
 const DEFAULT_TASKS = [
-  { id: "t1", name: "Addominali", target: "10 ripetizioni", icon: "dumbbell", xp: 15 },
-  { id: "t2", name: "Salti con la corda", target: "100 salti", icon: "footprints", xp: 20 },
-  { id: "t3", name: "Bici", target: "10 km", icon: "bike", xp: 30 },
-  { id: "t4", name: "Bere acqua", target: "2 litri", icon: "droplets", xp: 10 },
-  { id: "t5", name: "Integratori", target: "dose giornaliera", icon: "pill", xp: 10 },
+  { id: "t1", name: "Integratori", target: "dose giornaliera", icon: "pill", xp: 10, period: "morning" },
+  { id: "t2", name: "Addominali", target: "10 ripetizioni", icon: "dumbbell", xp: 15, period: "morning" },
+  { id: "t3", name: "Salti con la corda", target: "100 salti", icon: "footprints", xp: 20, period: "afternoon" },
+  { id: "t4", name: "Bici", target: "10 km", icon: "bike", xp: 30, period: "afternoon" },
+  { id: "t5", name: "Bere acqua", target: "2 litri", icon: "droplets", xp: 10, period: "evening" },
 ];
 
 const LEVELS = [
@@ -279,9 +285,9 @@ export default function DailyQuestTracker() {
   const [levelUpInfo, setLevelUpInfo] = useState(null);
   const [lastDoneId, setLastDoneId] = useState(null);
   const [view, setView] = useState("tasks");
-  const [addForm, setAddForm] = useState({ name: "", target: "", icon: "dumbbell", xp: 15 });
+  const [addForm, setAddForm] = useState({ name: "", target: "", icon: "dumbbell", xp: 15, period: "morning" });
   const [editingId, setEditingId] = useState(null);
-  const [editForm, setEditForm] = useState({ name: "", target: "", icon: "", xp: 0 });
+  const [editForm, setEditForm] = useState({ name: "", target: "", icon: "", xp: 0, period: "morning" });
   const [setupMode, setSetupMode] = useState(false);
 
   const today = getToday();
@@ -406,7 +412,7 @@ export default function DailyQuestTracker() {
   const addTask = () => {
     if (!addForm.name.trim()) return;
     setTasks((p) => [...p, { id: uid(), ...addForm, xp: Number(addForm.xp) || 10 }]);
-    setAddForm({ name: "", target: "", icon: "dumbbell", xp: 15 });
+    setAddForm({ name: "", target: "", icon: "dumbbell", xp: 15, period: "morning" });
     setView("tasks");
   };
 
@@ -414,7 +420,7 @@ export default function DailyQuestTracker() {
     setTasks((p) => p.filter((t) => t.id !== id));
   };
 
-  const startEdit = (t) => { setEditingId(t.id); setEditForm({ name: t.name, target: t.target, icon: t.icon, xp: t.xp }); };
+  const startEdit = (t) => { setEditingId(t.id); setEditForm({ name: t.name, target: t.target, icon: t.icon, xp: t.xp, period: t.period || "morning" }); };
   const saveEdit = () => { setTasks((p) => p.map((t) => t.id === editingId ? { ...t, ...editForm, xp: Number(editForm.xp) || 10 } : t)); setEditingId(null); };
 
   // ─── LOADING ───
@@ -549,89 +555,130 @@ export default function DailyQuestTracker() {
         {/* ══════ TASKS VIEW ══════ */}
         {view === "tasks" && (
           <div>
-            {tasks.map((task) => {
-              const isDone = completed[task.id];
-              const pop = lastDoneId === task.id;
-
-              if (editingId === task.id) {
-                return (
-                  <div key={task.id} style={S.editCard}>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: "#555", marginBottom: 8 }}>Modifica Quest</div>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
-                      {ICON_KEYS.map((k) => (
-                        <button key={k} onClick={() => setEditForm({ ...editForm, icon: k })} style={{
-                          ...S.iconPick,
-                          border: editForm.icon === k ? "2px solid #764ba2" : "2px solid #eee",
-                          background: editForm.icon === k ? "rgba(118,75,162,0.08)" : "#fff",
-                        }}>
-                          <TaskIcon icon={k} size={18} color={editForm.icon === k ? "#764ba2" : "#aaa"} />
-                        </button>
-                      ))}
-                    </div>
-                    <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nome" style={S.input} />
-                    <input value={editForm.target} onChange={(e) => setEditForm({ ...editForm, target: e.target.value })} placeholder="Obiettivo" style={S.input} />
-                    <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
-                      <Zap size={14} color="#999" />
-                      <span style={{ fontSize: 12, color: "#666" }}>XP:</span>
-                      <input type="number" value={editForm.xp} onChange={(e) => setEditForm({ ...editForm, xp: e.target.value })} style={{ ...S.input, width: 64, textAlign: "center", marginBottom: 0 }} />
-                    </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                      <button onClick={saveEdit} style={{ ...S.btnPrimary, flex: 1 }}><Check size={16} /> Salva</button>
-                      <button onClick={() => setEditingId(null)} style={{ ...S.btnSecondary, flex: 1 }}><X size={16} /> Annulla</button>
-                    </div>
-                  </div>
-                );
-              }
+            {PERIODS.map((period) => {
+              const periodTasks = tasks.filter((t) => (t.period || "morning") === period.id);
+              if (periodTasks.length === 0 && !editingId) return null;
+              const periodDone = periodTasks.filter((t) => completed[t.id]).length;
+              const allPeriodDone = periodTasks.length > 0 && periodDone === periodTasks.length;
 
               return (
-                <div
-                  key={task.id}
-                  onClick={() => toggleTask(task.id)}
-                  style={{
-                    ...S.taskCard,
-                    transform: pop ? "scale(1.03)" : "scale(1)",
-                    border: isDone ? "2px solid #4ECDC4" : "2px solid transparent",
-                    boxShadow: isDone ? "0 4px 20px rgba(78,205,196,0.25)" : "0 2px 8px rgba(0,0,0,0.08)",
-                  }}
-                >
-                  <div style={{
-                    ...S.checkbox,
-                    background: isDone ? "linear-gradient(135deg, #4ECDC4, #44B09E)" : "transparent",
-                    border: isDone ? "none" : "2.5px solid #ccc",
-                  }}>
-                    {isDone && <Check size={18} color="#fff" strokeWidth={3} />}
-                  </div>
-
-                  <div style={{
-                    ...S.taskIconWrap,
-                    background: isDone ? `linear-gradient(135deg, ${currentLevel.color}22, ${currentLevel.color}11)` : "#f5f5f5",
-                  }}>
-                    <TaskIcon icon={task.icon} size={20} color={isDone ? currentLevel.color : "#aaa"} />
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 15, fontWeight: 700, color: isDone ? "#bbb" : "#333", textDecoration: isDone ? "line-through" : "none", transition: "all 0.2s" }}>
-                      {task.name}
+                <div key={period.id} style={{ marginBottom: 16 }}>
+                  {/* Period Header */}
+                  <div style={S.periodHeader}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                      <period.Icon size={16} color={period.color} />
+                      <span style={{ fontSize: 13, fontWeight: 800, color: "rgba(255,255,255,0.9)", letterSpacing: 0.3 }}>
+                        {period.label}
+                      </span>
                     </div>
-                    <div style={{ fontSize: 12, color: "#aaa", marginTop: 1 }}>{task.target}</div>
+                    <span style={{
+                      fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 12,
+                      background: allPeriodDone ? "rgba(255,215,0,0.25)" : "rgba(255,255,255,0.1)",
+                      color: allPeriodDone ? "#FFD700" : "rgba(255,255,255,0.5)",
+                    }}>
+                      {periodDone}/{periodTasks.length}
+                    </span>
                   </div>
 
-                  <div style={{
-                    ...S.xpChip,
-                    background: isDone ? "linear-gradient(135deg, #FFD700, #FFA500)" : "#f0f0f0",
-                    color: isDone ? "#fff" : "#bbb",
-                  }}>
-                    <Zap size={11} /> {task.xp}
-                  </div>
+                  {periodTasks.map((task) => {
+                    const isDone = completed[task.id];
+                    const pop = lastDoneId === task.id;
 
-                  <div style={{ display: "flex", gap: 2 }} onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => startEdit(task)} style={S.tinyBtn} aria-label="Modifica">
-                      <Pencil size={13} color="#bbb" />
-                    </button>
-                    <button onClick={() => removeTask(task.id)} style={{ ...S.tinyBtn, background: "rgba(239,68,68,0.06)" }} aria-label="Elimina">
-                      <Trash2 size={13} color="#e88" />
-                    </button>
-                  </div>
+                    if (editingId === task.id) {
+                      return (
+                        <div key={task.id} style={S.editCard}>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: "#555", marginBottom: 8 }}>Modifica Quest</div>
+                          <label style={S.label}>MOMENTO</label>
+                          <div style={{ display: "flex", gap: 6, marginBottom: 12 }}>
+                            {PERIODS.map((p) => (
+                              <button key={p.id} onClick={() => setEditForm({ ...editForm, period: p.id })} style={{
+                                ...S.periodPick,
+                                border: editForm.period === p.id ? `2px solid ${p.color}` : "2px solid #eee",
+                                background: editForm.period === p.id ? `${p.color}12` : "#fff",
+                                color: editForm.period === p.id ? p.color : "#aaa",
+                              }}>
+                                <p.Icon size={14} /> {p.label}
+                              </button>
+                            ))}
+                          </div>
+                          <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+                            {ICON_KEYS.map((k) => (
+                              <button key={k} onClick={() => setEditForm({ ...editForm, icon: k })} style={{
+                                ...S.iconPick,
+                                border: editForm.icon === k ? "2px solid #764ba2" : "2px solid #eee",
+                                background: editForm.icon === k ? "rgba(118,75,162,0.08)" : "#fff",
+                              }}>
+                                <TaskIcon icon={k} size={18} color={editForm.icon === k ? "#764ba2" : "#aaa"} />
+                              </button>
+                            ))}
+                          </div>
+                          <input value={editForm.name} onChange={(e) => setEditForm({ ...editForm, name: e.target.value })} placeholder="Nome" style={S.input} />
+                          <input value={editForm.target} onChange={(e) => setEditForm({ ...editForm, target: e.target.value })} placeholder="Obiettivo" style={S.input} />
+                          <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+                            <Zap size={14} color="#999" />
+                            <span style={{ fontSize: 12, color: "#666" }}>XP:</span>
+                            <input type="number" value={editForm.xp} onChange={(e) => setEditForm({ ...editForm, xp: e.target.value })} style={{ ...S.input, width: 64, textAlign: "center", marginBottom: 0 }} />
+                          </div>
+                          <div style={{ display: "flex", gap: 8 }}>
+                            <button onClick={saveEdit} style={{ ...S.btnPrimary, flex: 1 }}><Check size={16} /> Salva</button>
+                            <button onClick={() => setEditingId(null)} style={{ ...S.btnSecondary, flex: 1 }}><X size={16} /> Annulla</button>
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div
+                        key={task.id}
+                        onClick={() => toggleTask(task.id)}
+                        style={{
+                          ...S.taskCard,
+                          transform: pop ? "scale(1.03)" : "scale(1)",
+                          border: isDone ? "2px solid #4ECDC4" : "2px solid transparent",
+                          boxShadow: isDone ? "0 4px 20px rgba(78,205,196,0.25)" : "0 2px 8px rgba(0,0,0,0.08)",
+                        }}
+                      >
+                        <div style={{
+                          ...S.checkbox,
+                          background: isDone ? "linear-gradient(135deg, #4ECDC4, #44B09E)" : "transparent",
+                          border: isDone ? "none" : "2.5px solid #ccc",
+                        }}>
+                          {isDone && <Check size={18} color="#fff" strokeWidth={3} />}
+                        </div>
+
+                        <div style={{
+                          ...S.taskIconWrap,
+                          background: isDone ? `linear-gradient(135deg, ${currentLevel.color}22, ${currentLevel.color}11)` : "#f5f5f5",
+                        }}>
+                          <TaskIcon icon={task.icon} size={20} color={isDone ? currentLevel.color : "#aaa"} />
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 15, fontWeight: 700, color: isDone ? "#bbb" : "#333", textDecoration: isDone ? "line-through" : "none", transition: "all 0.2s" }}>
+                            {task.name}
+                          </div>
+                          <div style={{ fontSize: 12, color: "#aaa", marginTop: 1 }}>{task.target}</div>
+                        </div>
+
+                        <div style={{
+                          ...S.xpChip,
+                          background: isDone ? "linear-gradient(135deg, #FFD700, #FFA500)" : "#f0f0f0",
+                          color: isDone ? "#fff" : "#bbb",
+                        }}>
+                          <Zap size={11} /> {task.xp}
+                        </div>
+
+                        <div style={{ display: "flex", gap: 2 }} onClick={(e) => e.stopPropagation()}>
+                          <button onClick={() => startEdit(task)} style={S.tinyBtn} aria-label="Modifica">
+                            <Pencil size={13} color="#bbb" />
+                          </button>
+                          <button onClick={() => removeTask(task.id)} style={{ ...S.tinyBtn, background: "rgba(239,68,68,0.06)" }} aria-label="Elimina">
+                            <Trash2 size={13} color="#e88" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               );
             })}
@@ -648,6 +695,20 @@ export default function DailyQuestTracker() {
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 14 }}>
               <Plus size={18} color="#764ba2" />
               <span style={{ fontSize: 17, fontWeight: 800, color: "#333" }}>Nuova Quest</span>
+            </div>
+
+            <label style={S.label}>MOMENTO DELLA GIORNATA</label>
+            <div style={{ display: "flex", gap: 6, marginBottom: 14 }}>
+              {PERIODS.map((p) => (
+                <button key={p.id} onClick={() => setAddForm({ ...addForm, period: p.id })} style={{
+                  ...S.periodPick,
+                  border: addForm.period === p.id ? `2px solid ${p.color}` : "2px solid #eee",
+                  background: addForm.period === p.id ? `${p.color}12` : "#fff",
+                  color: addForm.period === p.id ? p.color : "#aaa",
+                }}>
+                  <p.Icon size={14} /> {p.label}
+                </button>
+              ))}
             </div>
 
             <label style={S.label}>ICONA</label>
@@ -857,6 +918,15 @@ const S = {
   tinyBtn: {
     width: 28, height: 28, border: "none", borderRadius: 8, background: "rgba(0,0,0,0.04)",
     cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+  },
+  periodHeader: {
+    display: "flex", justifyContent: "space-between", alignItems: "center",
+    padding: "6px 4px", marginBottom: 6,
+  },
+  periodPick: {
+    flex: 1, padding: "8px 4px", borderRadius: 10, cursor: "pointer",
+    fontSize: 12, fontWeight: 700, display: "flex", alignItems: "center",
+    justifyContent: "center", gap: 4, transition: "all 0.15s",
   },
   addBtn: {
     width: "100%", padding: 13, border: "2px dashed rgba(255,255,255,0.35)",
