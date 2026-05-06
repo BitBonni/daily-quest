@@ -5,7 +5,8 @@ import {
   Award, Swords, Heart, X, Settings, Sparkles, Crown, Shield,
   Rocket, Brain, BookOpen, Music, Moon, Apple, Footprints,
   Timer, Coffee, Salad, ArrowUp, Medal, TrendingUp, CalendarCheck,
-  CircleDot, Loader2, Sunrise, Sun, Sunset
+  CircleDot, Loader2, Sunrise, Sun, Sunset, Undo2, Calendar,
+  ChevronRight, RotateCcw
 } from "lucide-react";
 
 // ═══════════════════════════════════════════════════
@@ -288,7 +289,9 @@ export default function DailyQuestTracker() {
   const [addForm, setAddForm] = useState({ name: "", target: "", icon: "dumbbell", xp: 15, period: "morning" });
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({ name: "", target: "", icon: "", xp: 0, period: "morning" });
-  const [setupMode, setSetupMode] = useState(false);
+  const [deletedTask, setDeletedTask] = useState(null);
+  const [undoTimer, setUndoTimer] = useState(null);
+  const [calMonth, setCalMonth] = useState(() => { const d = new Date(); return { year: d.getFullYear(), month: d.getMonth() }; });
 
   const today = getToday();
   const completed = completedByDate[today] || {};
@@ -417,11 +420,39 @@ export default function DailyQuestTracker() {
   };
 
   const removeTask = (id) => {
+    const task = tasks.find((t) => t.id === id);
+    if (!task) return;
     setTasks((p) => p.filter((t) => t.id !== id));
+    // Save for undo
+    if (undoTimer) clearTimeout(undoTimer);
+    setDeletedTask(task);
+    const timer = setTimeout(() => { setDeletedTask(null); }, 5000);
+    setUndoTimer(timer);
+  };
+
+  const undoDelete = () => {
+    if (!deletedTask) return;
+    setTasks((p) => [...p, deletedTask]);
+    setDeletedTask(null);
+    if (undoTimer) clearTimeout(undoTimer);
   };
 
   const startEdit = (t) => { setEditingId(t.id); setEditForm({ name: t.name, target: t.target, icon: t.icon, xp: t.xp, period: t.period || "morning" }); };
   const saveEdit = () => { setTasks((p) => p.map((t) => t.id === editingId ? { ...t, ...editForm, xp: Number(editForm.xp) || 10 } : t)); setEditingId(null); };
+
+  const [showResetConfirm, setShowResetConfirm] = useState(false);
+  const resetAllData = () => {
+    setTasks(DEFAULT_TASKS);
+    setCompletedByDate({});
+    setTotalXP(0);
+    setTotalCompleted(0);
+    setStreak(0);
+    setMaxStreak(0);
+    setPerfectDays(0);
+    setEarnedBadges([]);
+    setLastPerfectDate(null);
+    setShowResetConfirm(false);
+  };
 
   // ─── LOADING ───
   if (!loaded) {
@@ -457,6 +488,16 @@ export default function DailyQuestTracker() {
             <div style={{ fontWeight: 700, fontSize: 13 }}>Nuovo Badge!</div>
             <div style={{ fontSize: 12, opacity: 0.9 }}>{newBadge.name}</div>
           </div>
+        </div>
+      )}
+
+      {/* ── UNDO DELETE TOAST ── */}
+      {deletedTask && (
+        <div style={S.undoToast}>
+          <span style={{ fontSize: 13 }}>"{deletedTask.name}" eliminata</span>
+          <button onClick={undoDelete} style={S.undoBtn}>
+            <Undo2 size={14} /> Annulla
+          </button>
         </div>
       )}
 
@@ -535,6 +576,7 @@ export default function DailyQuestTracker() {
         <div style={S.nav}>
           {[
             { key: "tasks", label: "Quest", Icon: Swords },
+            { key: "calendar", label: "Calendario", Icon: Calendar },
             { key: "badges", label: "Badge", Icon: Award },
             { key: "stats", label: "Stats", Icon: BarChart3 },
           ].map((tab) => (
@@ -752,6 +794,127 @@ export default function DailyQuestTracker() {
           </div>
         )}
 
+        {/* ══════ CALENDAR VIEW ══════ */}
+        {view === "calendar" && (() => {
+          const { year, month } = calMonth;
+          const firstDay = new Date(year, month, 1).getDay();
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const offset = firstDay === 0 ? 6 : firstDay - 1; // Monday start
+          const monthName = new Date(year, month).toLocaleDateString("it-IT", { month: "long", year: "numeric" });
+          const todayStr = getToday();
+          const cells = [];
+          for (let i = 0; i < offset; i++) cells.push(null);
+          for (let d = 1; d <= daysInMonth; d++) cells.push(d);
+
+          const prevMonth = () => setCalMonth(m => m.month === 0 ? { year: m.year - 1, month: 11 } : { ...m, month: m.month - 1 });
+          const nextMonth = () => setCalMonth(m => m.month === 11 ? { year: m.year + 1, month: 0 } : { ...m, month: m.month + 1 });
+
+          return (
+            <div>
+              <div style={S.editCard}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                  <button onClick={prevMonth} style={S.calNavBtn}><ChevronLeft size={18} /></button>
+                  <span style={{ fontSize: 16, fontWeight: 800, color: "#333", textTransform: "capitalize" }}>{monthName}</span>
+                  <button onClick={nextMonth} style={S.calNavBtn}><ChevronRight size={18} /></button>
+                </div>
+
+                {/* Day headers */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2, marginBottom: 6 }}>
+                  {["L", "M", "M", "G", "V", "S", "D"].map((d, i) => (
+                    <div key={i} style={{ textAlign: "center", fontSize: 11, fontWeight: 700, color: "#aaa", padding: 4 }}>{d}</div>
+                  ))}
+                </div>
+
+                {/* Days grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 2 }}>
+                  {cells.map((day, i) => {
+                    if (day === null) return <div key={`e${i}`} />;
+                    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                    const dayCompleted = completedByDate[dateStr] || {};
+                    const doneCount = Object.values(dayCompleted).filter(Boolean).length;
+                    const totalTasks = tasks.length;
+                    const isToday = dateStr === todayStr;
+                    const isPerfect = doneCount > 0 && doneCount === totalTasks;
+                    const isPartial = doneCount > 0 && doneCount < totalTasks;
+                    const isFuture = dateStr > todayStr;
+
+                    return (
+                      <div key={dateStr} style={{
+                        textAlign: "center", padding: "6px 2px", borderRadius: 10,
+                        background: isPerfect ? "linear-gradient(135deg, #4ECDC4, #44B09E)"
+                          : isPartial ? "rgba(78,205,196,0.15)"
+                          : isToday ? "rgba(118,75,162,0.1)" : "transparent",
+                        border: isToday ? "2px solid #764ba2" : "2px solid transparent",
+                        opacity: isFuture ? 0.3 : 1,
+                      }}>
+                        <div style={{
+                          fontSize: 13, fontWeight: isToday ? 800 : 600,
+                          color: isPerfect ? "#fff" : isToday ? "#764ba2" : "#555",
+                        }}>
+                          {day}
+                        </div>
+                        {doneCount > 0 && !isPerfect && (
+                          <div style={{ fontSize: 9, color: "#4ECDC4", fontWeight: 700, marginTop: 1 }}>
+                            {doneCount}/{totalTasks}
+                          </div>
+                        )}
+                        {isPerfect && (
+                          <div style={{ fontSize: 9, color: "rgba(255,255,255,0.9)", fontWeight: 700, marginTop: 1 }}>
+                            <Check size={9} style={{ display: "inline" }} />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Legend */}
+                <div style={{ display: "flex", gap: 16, justifyContent: "center", marginTop: 14, fontSize: 11, color: "#999" }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: "linear-gradient(135deg, #4ECDC4, #44B09E)" }} /> Perfetto
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, background: "rgba(78,205,196,0.3)" }} /> Parziale
+                  </span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                    <div style={{ width: 10, height: 10, borderRadius: 3, border: "2px solid #764ba2" }} /> Oggi
+                  </span>
+                </div>
+              </div>
+
+              {/* Monthly summary */}
+              <div style={{ ...S.mottoCard, marginTop: 12 }}>
+                {(() => {
+                  let perfectCount = 0, activeDays = 0;
+                  for (let d = 1; d <= daysInMonth; d++) {
+                    const ds = `${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+                    if (ds > todayStr) break;
+                    const dc = completedByDate[ds] || {};
+                    const cnt = Object.values(dc).filter(Boolean).length;
+                    if (cnt > 0) activeDays++;
+                    if (cnt === tasks.length) perfectCount++;
+                  }
+                  return (
+                    <>
+                      <Calendar size={20} color="rgba(255,255,255,0.7)" />
+                      <div style={{ display: "flex", gap: 20, justifyContent: "center", marginTop: 10 }}>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: "#fff" }}>{activeDays}</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>GIORNI ATTIVI</div>
+                        </div>
+                        <div style={{ textAlign: "center" }}>
+                          <div style={{ fontSize: 22, fontWeight: 800, color: "#FFD700" }}>{perfectCount}</div>
+                          <div style={{ fontSize: 10, color: "rgba(255,255,255,0.6)", fontWeight: 600 }}>PERFETTI</div>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ══════ BADGES VIEW ══════ */}
         {view === "badges" && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -827,6 +990,7 @@ export default function DailyQuestTracker() {
         @keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
         @keyframes popIn { from { transform: scale(0.5); opacity: 0 } to { transform: scale(1); opacity: 1 } }
         @keyframes slideDown { from { transform: translateX(-50%) translateY(-120%); opacity: 0 } to { transform: translateX(-50%) translateY(0); opacity: 1 } }
+        @keyframes slideUp { from { transform: translateX(-50%) translateY(100%); opacity: 0 } to { transform: translateX(-50%) translateY(0); opacity: 1 } }
         @keyframes spin { to { transform: rotate(360deg) } }
         button:active { transform: scale(0.97); }
         input:focus { border-color: #764ba2 !important; outline: none; }
@@ -990,5 +1154,23 @@ const S = {
     zIndex: 9999, display: "flex", alignItems: "center", gap: 10,
     animation: "slideDown 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
     maxWidth: "90vw",
+  },
+  undoToast: {
+    position: "fixed", bottom: 24, left: "50%", transform: "translateX(-50%)",
+    background: "rgba(30,30,30,0.95)", color: "#fff",
+    padding: "10px 16px", borderRadius: 14, boxShadow: "0 8px 28px rgba(0,0,0,0.4)",
+    zIndex: 9999, display: "flex", alignItems: "center", gap: 12,
+    animation: "slideUp 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+    maxWidth: "90vw",
+  },
+  undoBtn: {
+    padding: "6px 12px", border: "none", borderRadius: 8,
+    background: "#4ECDC4", color: "#fff", fontSize: 13, fontWeight: 700,
+    cursor: "pointer", display: "flex", alignItems: "center", gap: 4,
+  },
+  calNavBtn: {
+    width: 36, height: 36, border: "none", borderRadius: 10,
+    background: "#f5f5f5", cursor: "pointer", display: "flex",
+    alignItems: "center", justifyContent: "center", padding: 0, color: "#555",
   },
 };
