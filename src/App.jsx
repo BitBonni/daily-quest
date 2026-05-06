@@ -978,6 +978,32 @@ export default function DailyQuestTracker() {
                   : "Leggenda vivente! Niente ti può fermare!"}
               </div>
             </div>
+
+            {/* Reset */}
+            <button onClick={() => setShowResetConfirm(true)} style={S.resetBtn}>
+              <RotateCcw size={14} /> Cancella tutti i dati
+            </button>
+          </div>
+        )}
+
+        {/* ── RESET CONFIRM ── */}
+        {showResetConfirm && (
+          <div style={S.overlay} onClick={() => setShowResetConfirm(false)}>
+            <div style={S.resetModal} onClick={(e) => e.stopPropagation()}>
+              <RotateCcw size={32} color="#EF4444" />
+              <div style={{ fontSize: 18, fontWeight: 800, color: "#333", marginTop: 10 }}>Cancellare tutto?</div>
+              <div style={{ fontSize: 14, color: "#888", marginTop: 4, lineHeight: 1.4 }}>
+                Tutti i progressi, XP, streak, badge e storico verranno eliminati. Questa azione non si può annullare.
+              </div>
+              <div style={{ display: "flex", gap: 10, marginTop: 16, width: "100%" }}>
+                <button onClick={resetAllData} style={{ ...S.btnPrimary, flex: 1, background: "linear-gradient(135deg, #EF4444, #DC2626)" }}>
+                  <Trash2 size={16} /> Cancella
+                </button>
+                <button onClick={() => setShowResetConfirm(false)} style={{ ...S.btnSecondary, flex: 1 }}>
+                  <X size={16} /> Annulla
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1008,7 +1034,7 @@ const S = {
     minHeight: "100vh",
     minHeight: "100dvh",
     background: "linear-gradient(150deg, #667eea 0%, #764ba2 40%, #f093fb 100%)",
-    fontFamily: "'SF Pro Display', 'Segoe UI', system-ui, -apple-system, sans-serif",
+    fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
     padding: "12px 12px env(safe-area-inset-bottom, 12px)",
     WebkitFontSmoothing: "antialiased",
   },
@@ -1172,5 +1198,18 @@ const S = {
     width: 36, height: 36, border: "none", borderRadius: 10,
     background: "#f5f5f5", cursor: "pointer", display: "flex",
     alignItems: "center", justifyContent: "center", padding: 0, color: "#555",
+  },
+  resetBtn: {
+    width: "100%", padding: 12, border: "1px solid rgba(239,68,68,0.3)",
+    borderRadius: 12, background: "rgba(239,68,68,0.08)", color: "#EF4444",
+    fontSize: 13, fontWeight: 600, cursor: "pointer", marginTop: 12,
+    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+    fontFamily: "'Inter', system-ui, sans-serif",
+  },
+  resetModal: {
+    background: "#fff", borderRadius: 24, padding: "28px 24px", textAlign: "center",
+    animation: "popIn 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55)",
+    boxShadow: "0 20px 60px rgba(0,0,0,0.3)", maxWidth: 320, width: "90vw",
+    display: "flex", flexDirection: "column", alignItems: "center",
   },
 };
