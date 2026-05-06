@@ -317,7 +317,7 @@ export default function DailyQuestTracker() {
     (async () => {
       const saved = await loadState();
       if (saved) {
-        setTasks(saved.tasks || INITIAL_STATE.tasks);
+        setTasks(saved.tasks && saved.tasks.length > 0 ? saved.tasks : INITIAL_STATE.tasks);
         setCompletedByDate(saved.completedByDate || {});
         setTotalXP(saved.totalXP || 0);
         setTotalCompleted(saved.totalCompleted || 0);
@@ -1031,7 +1031,6 @@ export default function DailyQuestTracker() {
 // ═══════════════════════════════════════════════════
 const S = {
   root: {
-    minHeight: "100vh",
     minHeight: "100dvh",
     background: "linear-gradient(150deg, #667eea 0%, #764ba2 40%, #f093fb 100%)",
     fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
